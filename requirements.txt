@@ -2,7 +2,8 @@ langchain
 langchain-community
 faiss-cpu
 sentence-transformers
-chromadbFlask
+chromadb
+Flask
 Flask-SQLAlchemy
 Flask-Migrate
 Flask-CORS
