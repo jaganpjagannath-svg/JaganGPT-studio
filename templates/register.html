@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up • JaganGpt</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-dark);overflow:auto;">
+
+  <div style="width:100%;max-width:400px;padding:24px;">
+    
+    <div style="background-color:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:20px;padding:36px 28px;box-shadow:var(--shadow-lg);text-align:center;">
+      
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" style="width:54px;height:54px;" alt="JaganGpt">
+        <h1 class="brand-title" style="font-size:1.8rem;">JaganGpt</h1>
+        <p style="color:var(--text-dim);font-size:0.88rem;">Create your personal AI workspace account</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('register') }}" style="display:flex;flex-direction:column;gap:14px;text-align:left;">
+        <div>
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:6px;">Username</label>
+          <input type="text" name="username" required autofocus class="chat-search-input" style="padding:12px;" placeholder="Username">
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:6px;">Email</label>
+          <input type="email" name="email" required class="chat-search-input" style="padding:12px;" placeholder="you@example.com">
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:6px;">Full Name</label>
+          <input type="text" name="full_name" class="chat-search-input" style="padding:12px;" placeholder="Your Name">
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:6px;">Password</label>
+          <input type="password" name="password" required minlength="6" class="chat-search-input" style="padding:12px;" placeholder="At least 6 characters">
+        </div>
+
+        <button type="submit" class="btn-new-chat" style="justify-content:center;background:var(--gradient-brand);color:#fff;border:none;padding:12px;margin-top:10px;">
+          Create Account
+        </button>
+      </form>
+
+    </div>
+
+    <div style="text-align:center;margin-top:18px;display:flex;flex-direction:column;gap:10px;font-size:0.88rem;color:var(--text-dim);">
+      <div>
+        Already have an account? <a href="{{ url_for('login') }}" style="color:var(--accent-cyan);font-weight:600;">Log in</a>
+      </div>
+      <div>
+        or <a href="{{ url_for('guest_login') }}" style="color:var(--text-muted);text-decoration:underline;">Continue as Guest (Text Only)</a>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

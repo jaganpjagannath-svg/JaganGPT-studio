@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="jgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="jgCore" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+    <filter id="jgGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Outer Dark Squircle Container -->
+  <rect x="5" y="5" width="90" height="90" rx="26" fill="#090d16" stroke="url(#jgGrad)" stroke-width="3.5" filter="url(#jgGlow)"/>
+
+  <!-- Orbiting Neural Ring -->
+  <circle cx="50" cy="50" r="32" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1.5" stroke-dasharray="4 4" />
+
+  <!-- Dynamic Multimodal Sparks -->
+  <circle cx="50" cy="18" r="4" fill="#06b6d4" />
+  <circle cx="82" cy="50" r="3.5" fill="#3b82f6" />
+  <circle cx="50" cy="82" r="4" fill="#8b5cf6" />
+  <circle cx="18" cy="50" r="3.5" fill="#ec4899" />
+
+  <!-- Stylized J Logo Monogram + Spark -->
+  <!-- Top Horizontal Bar -->
+  <rect x="36" y="28" width="30" height="6.5" rx="3.25" fill="url(#jgGrad)" />
+  <!-- Vertical Stem -->
+  <rect x="52" y="28" width="6.5" height="34" rx="3.25" fill="url(#jgGrad)" />
+  <!-- Bottom Hook -->
+  <path d="M58.5 62 C58.5 71, 46 73, 38 69 C35 67.5, 33 64.5, 33 60" stroke="url(#jgGrad)" stroke-width="6.5" stroke-linecap="round" fill="none" />
+  
+  <!-- Central Glowing Neural Core Node -->
+  <circle cx="55" cy="45" r="5" fill="url(#jgCore)" filter="url(#jgGlow)" />
+</svg>

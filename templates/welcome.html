@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to JaganGpt • Think. Create. Talk. Transform.</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-dark);padding:20px;overflow:auto;">
+
+  <div style="width:100%;max-width:480px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+    
+    <!-- Language Switcher at Top -->
+    <div class="lang-switch-box" style="width:200px;margin-bottom:28px;">
+      <button class="lang-btn active" id="lang-btn-en" onclick="setLanguage('en')">🇬🇧 English</button>
+      <button class="lang-btn" id="lang-btn-te" onclick="setLanguage('te')">🇮🇳 Telugu</button>
+    </div>
+
+    <!-- Main Welcome Card -->
+    <div style="background-color:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:24px;padding:40px 32px;box-shadow:var(--shadow-lg);width:100%;">
+      
+      <!-- Brand Logo & Header -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" style="width:68px;height:68px;filter:drop-shadow(0 0 16px rgba(59,130,246,0.5));" alt="JaganGpt">
+        <h1 class="brand-title" style="font-size:2.2rem;letter-spacing:-0.5px;" data-i18n="app_name">JaganGpt</h1>
+        <p style="color:var(--text-muted);font-size:0.95rem;font-weight:500;" data-i18n="tagline">
+          Think. Create. Talk. Transform.
+        </p>
+      </div>
+
+      <!-- Feature Badges -->
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:32px;">
+        <span style="font-size:0.75rem;padding:4px 10px;border-radius:9999px;background:rgba(6,182,212,0.15);color:var(--accent-cyan);border:1px solid rgba(6,182,212,0.3);">⚡ Gemini 2.5 Flash</span>
+        <span style="font-size:0.75rem;padding:4px 10px;border-radius:9999px;background:rgba(59,130,246,0.15);color:var(--accent-blue);border:1px solid rgba(59,130,246,0.3);">🎙️ Real Voice Mode</span>
+        <span style="font-size:0.75rem;padding:4px 10px;border-radius:9999px;background:rgba(236,72,153,0.15);color:var(--accent-pink);border:1px solid rgba(236,72,153,0.3);">🎨 Image & Video Gen</span>
+        <span style="font-size:0.75rem;padding:4px 10px;border-radius:9999px;background:rgba(16,185,129,0.15);color:var(--accent-green);border:1px solid rgba(16,185,129,0.3);">🇮🇳 Multilingual AI</span>
+      </div>
+
+      <!-- 3 Primary Action Choices: Guest, Login, Register -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        
+        <!-- 1. Continue as Guest -->
+        <a href="{{ url_for('guest_login') }}" class="btn-new-chat" style="justify-content:center;background:var(--gradient-brand);color:#fff;border:none;padding:14px;font-size:1rem;box-shadow:0 0 20px rgba(59,130,246,0.4);">
+          <span>🚀</span>
+          <span data-i18n="btn_guest">Continue as Guest (Text Only)</span>
+        </a>
+
+        <!-- 2. Log In -->
+        <a href="{{ url_for('login') }}" class="btn-new-chat" style="justify-content:center;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border-highlight);padding:12px;font-size:0.95rem;">
+          <span>🔐</span>
+          <span data-i18n="btn_login">Log In</span>
+        </a>
+
+        <!-- 3. Register / Sign Up -->
+        <a href="{{ url_for('register') }}" class="btn-new-chat" style="justify-content:center;background:transparent;color:var(--text-muted);border:1px solid var(--border-subtle);padding:12px;font-size:0.95rem;">
+          <span>✨</span>
+          <span data-i18n="btn_register">Create an Account</span>
+        </a>
+
+      </div>
+
+      <div style="margin-top:24px;font-size:0.78rem;color:var(--text-dim);line-height:1.5;">
+        ⚡ <strong>Guest Mode:</strong> Instant text chat without sign-up.<br>
+        🎨 <strong>Images & Videos:</strong> Create an account or log in to unlock full media generation!
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+</body>
+</html>

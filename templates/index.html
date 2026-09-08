@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JaganGpt • Multimodal AI Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      
+      <div class="brand-row">
+        <a href="/" class="brand-link">
+          <img src="{{ url_for('static', filename='images/logo.svg') }}" class="brand-logo" alt="JaganGpt">
+          <span class="brand-title" data-i18n="app_name">JaganGpt</span>
+        </a>
+      </div>
+
+      <!-- New Chat Button -->
+      <button class="btn-new-chat" onclick="startNewChat()">
+        <span>✨</span>
+        <span data-i18n="new_chat">New Chat</span>
+      </button>
+
+      <!-- Search Conversations -->
+      <input type="text" class="chat-search-input" data-i18n-placeholder="search_chats" placeholder="Search chats..." oninput="filterConversations(this.value)">
+
+      <!-- Conversations History List -->
+      <div class="conversations-scroll" id="conversations-list">
+        {% for c in conversations %}
+        <div class="conv-item" data-conv-id="{{ c.id }}" onclick="loadConversation({{ c.id }})">
+          <span class="conv-title">{{ c.title }}</span>
+          <div class="conv-actions">
+            <button class="conv-act-btn" onclick="deleteConversation({{ c.id }}, event)" title="Delete">🗑️</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        
+        <!-- Language Switcher -->
+        <div class="lang-switch-box">
+          <button class="lang-btn active" id="lang-btn-en" onclick="setLanguage('en')">🇬🇧 English</button>
+          <button class="lang-btn" id="lang-btn-te" onclick="setLanguage('te')">🇮🇳 Telugu</button>
+        </div>
+
+        <!-- Guest Notice Banner if Guest -->
+        {% if is_guest %}
+        <div style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.25);border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:0.8rem;display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="color:#facc15;font-weight:700;">👤 Guest Mode</span>
+            <span style="font-size:0.7rem;background:rgba(234,179,8,0.25);color:#fef08a;padding:1px 6px;border-radius:9999px;">Text Only</span>
+          </div>
+          <div style="color:var(--text-dim);font-size:0.72rem;">Images & videos require account</div>
+          <div style="display:flex;gap:8px;margin-top:2px;">
+            <a href="{{ url_for('login') }}" style="color:var(--accent-cyan);font-weight:600;font-size:0.75rem;text-decoration:underline;">Log In</a>
+            <span style="color:var(--text-dim);">•</span>
+            <a href="{{ url_for('register') }}" style="color:var(--accent-pink);font-weight:600;font-size:0.75rem;text-decoration:underline;">Sign Up</a>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Settings Button -->
+        <button class="sidebar-action-item" onclick="openSettingsModal()">
+          <span>⚙️</span>
+          <span data-i18n="settings">Settings</span>
+          {% if not has_gemini_key %}
+            <span style="margin-left:auto;font-size:0.7rem;background:var(--accent-cyan);color:#000;font-weight:700;padding:2px 6px;border-radius:9999px;">Add API Key</span>
+          {% endif %}
+        </button>
+
+        <!-- User Profile & Logout -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;font-size:0.85rem;color:var(--text-dim);">
+          <span style="color:var(--text-muted);font-weight:600;">@{{ current_user.username }}</span>
+          <a href="{{ url_for('logout') }}" style="color:var(--accent-pink);" data-i18n="logout">Log Out</a>
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- Main Chat Workspace -->
+    <main class="main-chat-container">
+      
+      <!-- Top Navigation Bar -->
+      <header class="chat-topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('mobile-open');document.getElementById('sidebar-backdrop').classList.toggle('active');" aria-label="Toggle Navigation">☰</button>
+          <select class="model-selector" id="model-select">
+            <option value="jagangpt-smart">⚡ JaganGpt Smart (Gemini Multimodal)</option>
+            <option value="jagangpt-fast">🚀 JaganGpt Fast</option>
+            <option value="jagangpt-vision">👁️ JaganGpt Vision (OCR & Documents)</option>
+            <option value="jagangpt-voice">🎙️ JaganGpt Voice</option>
+          </select>
+        </div>
+
+        <div>
+          <!-- Voice Mode Trigger -->
+          <button class="btn-voice-mode-trigger" onclick="openVoiceMode()">
+            <span>🎙️</span>
+            <span data-i18n="voice_mode">Voice Mode</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages Stream Area -->
+      <div class="messages-stream" id="messages-stream">
+        
+        <!-- Welcome Screen (Visible on New Chat) -->
+        <div class="welcome-screen" id="welcome-screen">
+          <img src="{{ url_for('static', filename='images/logo.svg') }}" class="welcome-logo-large" alt="JaganGpt">
+          <h1 class="welcome-title" data-i18n="welcome_title">How can JaganGpt help you today?</h1>
+          <p class="welcome-sub" data-i18n="welcome_sub">
+            Ask a question, upload a document, dictate in voice, or generate images & videos.
+          </p>
+
+          <!-- 4 Quick Suggestion Prompt Cards -->
+          <div class="prompt-cards-grid">
+            <div class="prompt-card" onclick="insertQuickPrompt('Analyze and summarize the main points of this document.')">
+              <div class="prompt-card-title">📄 <span data-i18n="card_1_title">Document Analysis</span></div>
+              <div class="prompt-card-desc" data-i18n="card_1_desc">Upload a PDF, Excel sheet, or Word doc and ask for summaries or insights.</div>
+            </div>
+
+            <div class="prompt-card" onclick="{% if is_guest %}showGuestMediaNotice('image'){% else %}insertQuickPrompt('Generate an image of a futuristic Hyderabad city in 2050 with cyberpunk lights.'){% endif %}">
+              <div class="prompt-card-title">🎨 <span data-i18n="card_2_title">AI Image Generation</span>{% if is_guest %} <span style="font-size:0.7rem;background:rgba(234,179,8,0.2);color:#facc15;padding:1px 5px;border-radius:4px;">🔒 Member</span>{% endif %}</div>
+              <div class="prompt-card-desc" data-i18n="card_2_desc">Type 'Generate an image of...' in English, Telugu, or Tanglish.</div>
+            </div>
+
+            <div class="prompt-card" onclick="openVoiceMode()">
+              <div class="prompt-card-title">🎙️ <span data-i18n="card_3_title">Voice Conversation</span></div>
+              <div class="prompt-card-desc" data-i18n="card_3_desc">Speak naturally in Telugu or English and listen to real-time AI voice.</div>
+            </div>
+
+            <div class="prompt-card" onclick="insertQuickPrompt('Python lo functions ela work avuthayo simple examples tho explain cheyyi.')">
+              <div class="prompt-card-title">💻 <span data-i18n="card_4_title">Code & Logic</span></div>
+              <div class="prompt-card-desc" data-i18n="card_4_desc">Debug Python, write modern JavaScript, or solve algorithmic problems.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="messages-stream-inner" id="messages-stream-inner"></div>
+
+      </div>
+
+      <!-- Bottom Composer Bar -->
+      <div class="composer-container">
+        <div class="composer-box">
+          
+          <!-- Attachment Chips Preview Row -->
+          <div class="attachments-preview-row" id="attachments-preview-row"></div>
+
+          <!-- Textarea Input Row -->
+          <div class="composer-input-row">
+            <textarea id="chat-input" class="composer-textarea" rows="1" data-i18n-placeholder="input_placeholder" placeholder="Message JaganGpt... (English, Tanglish, or Voice)"></textarea>
+            <button class="btn-send-message" onclick="handleSendMessage()" data-i18n-title="send_tooltip" title="Send message">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+
+          <!-- Bottom Tools Row -->
+          <div class="composer-tools">
+            <div class="composer-tools-left">
+              <!-- File Attach Button -->
+              <input type="file" id="file-upload-input" style="display:none;" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.py,.js,.html,.json,.png,.jpg,.jpeg,.webp">
+              <button class="tool-btn" onclick="document.getElementById('file-upload-input').click()" data-i18n-title="attach_tooltip" title="Attach Document, Image, or Code">
+                <span>📎</span> Attach
+              </button>
+
+              <!-- Image Generation Button -->
+              <button class="tool-btn" onclick="{% if is_guest %}showGuestMediaNotice('image'){% else %}openImageGenModal(){% endif %}" title="{% if is_guest %}Guest: Text only (Sign in for Images){% else %}Generate Image{% endif %}">
+                <span>{% if is_guest %}🔒🎨{% else %}🎨{% endif %}</span> <span data-i18n="image_gen_btn">Generate Image</span>
+              </button>
+
+              <!-- Video Generation Button -->
+              <button class="tool-btn" onclick="{% if is_guest %}showGuestMediaNotice('video'){% else %}openVideoGenModal(){% endif %}" title="{% if is_guest %}Guest: Text only (Sign in for Videos){% else %}Generate Video{% endif %}">
+                <span>{% if is_guest %}🔒🎬{% else %}🎬{% endif %}</span> <span data-i18n="video_gen_btn">Generate Video</span>
+              </button>
+
+              <!-- Microphone Button -->
+              <button class="tool-btn" onclick="openVoiceMode()" data-i18n-title="mic_tooltip" title="Speak in English or Telugu">
+                <span>🎤</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Voice Mode Fullscreen Overlay -->
+  <div class="voice-mode-overlay" id="voice-mode-overlay">
+    
+    <div class="voice-topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" style="width:32px;height:32px;" alt="">
+        <span style="font-weight:700;">JaganGpt Voice</span>
+      </div>
+      <button onclick="toggleVoiceLanguage()" class="tool-btn" style="background:var(--bg-card);color:#fff;">
+        🌐 <span id="voice-lang-indicator">English / Telugu Voice</span>
+      </button>
+    </div>
+
+    <div class="voice-orb-container">
+      <div class="voice-orb listening" id="voice-orb"></div>
+      <div class="voice-status-text" id="voice-status-text" data-i18n="voice_listening">Listening to you...</div>
+      <div class="voice-transcript-snippet" id="voice-transcript-snippet">"Say something in English or Telugu..."</div>
+    </div>
+
+    <div class="voice-controls-bar">
+      <button class="voice-ctrl-btn" id="voice-mute-btn" onclick="toggleVoiceMute()" title="Mute/Unmute">🎤</button>
+      <button class="voice-ctrl-btn" onclick="stopSpeaking()" title="Stop audio playback">⏹️</button>
+      <button class="voice-ctrl-btn btn-end" onclick="closeVoiceMode()" title="End Voice Session">✕</button>
+    </div>
+
+  </div>
+
+  <!-- AI Media Studio Modal (Image & Video with Reference Face Identity Preservation) -->
+  <div class="modal-overlay" id="media-studio-modal" onclick="if(event.target===this) closeMediaStudio()">
+    <div class="modal-card studio-modal-card">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">✨</span>
+          <div>
+            <h3 style="font-size:1.05rem;font-weight:700;">JaganGpt Studio • Face Identity AI</h3>
+            <div style="font-size:0.72rem;color:var(--text-dim);">Reference-Conditioned Multimodal Generation</div>
+          </div>
+        </div>
+        <button onclick="closeMediaStudio()" style="font-size:1.2rem;color:var(--text-dim);">✕</button>
+      </div>
+
+      <div class="studio-modal-body">
+        
+        <!-- Mode Switcher: AI Image vs AI Video -->
+        <div class="studio-mode-toggle">
+          <button type="button" class="studio-mode-btn active" id="studio-mode-btn-image" onclick="switchStudioMode('image')">
+            🎨 AI Image Generation
+          </button>
+          <button type="button" class="studio-mode-btn" id="studio-mode-btn-video" onclick="switchStudioMode('video')">
+            🎬 AI Video Generation
+          </button>
+        </div>
+
+        <!-- Main Multi-Column Studio Workspace -->
+        <div class="studio-workspace-grid">
+          
+          <!-- Column 1: Reference Identity & Photo Slots -->
+          <div class="studio-col-identity">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span class="studio-label" style="margin-bottom:0;">👤 Reference Person (1–4 Photos)</span>
+              <button type="button" onclick="clearAllReferencePhotos(event)" style="background:none;border:none;color:var(--accent-pink);font-size:0.75rem;cursor:pointer;text-decoration:underline;">✕ Clear All</button>
+            </div>
+            
+            <input type="file" id="reference-file-input" style="display:none;" accept="image/*,.jpg,.jpeg,.png,.webp" onchange="handleReferenceFileSelected(this)">
+
+            <!-- 4 Multi-Reference Slots Grid (2x2 on Mobile, 4x1 on Tablet/Desktop) -->
+            <div class="multi-ref-grid">
+              
+              <!-- Slot 1 (Front View - Primary) -->
+              <div class="ref-slot-card active" id="ref-slot-0" onclick="triggerReferenceUpload(0)">
+                <div class="ref-slot-empty" id="ref-slot-empty-0">
+                  <span style="font-size:1.4rem;">👤</span>
+                  <div style="font-size:0.74rem;font-weight:700;margin-top:2px;">Slot 1: Front</div>
+                  <div style="font-size:0.65rem;color:var(--text-dim);">Primary Face</div>
+                </div>
+                <div class="ref-slot-filled" id="ref-slot-filled-0" style="display:none;">
+                  <img id="ref-slot-img-0" src="" alt="Front">
+                  <button type="button" class="btn-remove-slot" onclick="removeReferenceSlot(0, event)">✕</button>
+                  <div class="ref-slot-tag" id="ref-slot-tag-0">✓ Front</div>
+                </div>
+              </div>
+
+              <!-- Slot 2 (Left Angle) -->
+              <div class="ref-slot-card" id="ref-slot-1" onclick="triggerReferenceUpload(1)">
+                <div class="ref-slot-empty" id="ref-slot-empty-1">
+                  <span style="font-size:1.4rem;">👈</span>
+                  <div style="font-size:0.74rem;font-weight:700;margin-top:2px;">Slot 2: Left</div>
+                  <div style="font-size:0.65rem;color:var(--text-dim);">Side Profile</div>
+                </div>
+                <div class="ref-slot-filled" id="ref-slot-filled-1" style="display:none;">
+                  <img id="ref-slot-img-1" src="" alt="Left">
+                  <button type="button" class="btn-remove-slot" onclick="removeReferenceSlot(1, event)">✕</button>
+                  <div class="ref-slot-tag" id="ref-slot-tag-1">✓ Left</div>
+                </div>
+              </div>
+
+              <!-- Slot 3 (Right Angle) -->
+              <div class="ref-slot-card" id="ref-slot-2" onclick="triggerReferenceUpload(2)">
+                <div class="ref-slot-empty" id="ref-slot-empty-2">
+                  <span style="font-size:1.4rem;">👉</span>
+                  <div style="font-size:0.74rem;font-weight:700;margin-top:2px;">Slot 3: Right</div>
+                  <div style="font-size:0.65rem;color:var(--text-dim);">Side Profile</div>
+                </div>
+                <div class="ref-slot-filled" id="ref-slot-filled-2" style="display:none;">
+                  <img id="ref-slot-img-2" src="" alt="Right">
+                  <button type="button" class="btn-remove-slot" onclick="removeReferenceSlot(2, event)">✕</button>
+                  <div class="ref-slot-tag" id="ref-slot-tag-2">✓ Right</div>
+                </div>
+              </div>
+
+              <!-- Slot 4 (Full Body / Expression) -->
+              <div class="ref-slot-card" id="ref-slot-3" onclick="triggerReferenceUpload(3)">
+                <div class="ref-slot-empty" id="ref-slot-empty-3">
+                  <span style="font-size:1.4rem;">🧍</span>
+                  <div style="font-size:0.74rem;font-weight:700;margin-top:2px;">Slot 4: Body</div>
+                  <div style="font-size:0.65rem;color:var(--text-dim);">Full Pose</div>
+                </div>
+                <div class="ref-slot-filled" id="ref-slot-filled-3" style="display:none;">
+                  <img id="ref-slot-img-3" src="" alt="Body">
+                  <button type="button" class="btn-remove-slot" onclick="removeReferenceSlot(3, event)">✕</button>
+                  <div class="ref-slot-tag" id="ref-slot-tag-3">✓ Body</div>
+                </div>
+              </div>
+
+            </div>
+
+            <div style="font-size:0.74rem;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <span id="multi-ref-summary">💡 Upload 1 to 4 photos for master 360° identity.</span>
+              <span style="color:var(--accent-cyan);font-weight:600;" id="master-vec-badge">No Reference</span>
+            </div>
+
+            <!-- Identity vs Transformation Guidance Box -->
+            <div class="studio-guide-box">
+              <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                <span style="color:#34d399;">✓</span> Identity Guarantee
+              </div>
+              Facial bone structure, eyes, nose, lips, jawline & skin tone stay locked. Clothes, sunglasses, pose & background change to match your prompt.
+            </div>
+          </div>
+
+          <!-- Column 2: Prompt, Sliders & Generation Settings -->
+          <div class="studio-col-transformation">
+
+            <!-- Hidden technical slider controls for background defaults -->
+            <input type="hidden" id="identity-threshold-slider" value="0.70">
+            <input type="hidden" id="prompt-strength-slider" value="0.85">
+
+            <!-- Prompt Textarea -->
+            <div style="margin-bottom:12px;">
+              <label class="studio-label" for="studio-prompt-input" style="font-weight:700;letter-spacing:0.5px;">PROMPT</label>
+              <textarea id="studio-prompt-input" class="composer-textarea" rows="3" style="width:100%;background:var(--bg-dark);border:1px solid var(--border-subtle);border-radius:10px;padding:12px;font-size:0.9rem;resize:vertical;line-height:1.4;" placeholder="Describe what you want to create... (e.g. Create an ultra-realistic cinematic 4K full-body portrait of this person wearing a premium black shirt, black pants and black sunglasses, standing in a deep black studio with dramatic movie lighting)"></textarea>
+            </div>
+
+            <!-- Optional Negative Prompt Toggle -->
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <button type="button" onclick="const b=document.getElementById('negative-prompt-box');b.style.display=b.style.display==='none'?'block':'none';" style="font-size:0.78rem;color:var(--accent-blue);text-decoration:underline;cursor:pointer;">
+                  ⚙️ Add Negative Prompt (Optional)
+                </button>
+              </div>
+              <div id="negative-prompt-box" style="display:none;margin-top:6px;">
+                <input type="text" id="studio-negative-prompt" class="chat-search-input" style="padding:8px 12px;font-size:0.82rem;" placeholder="e.g. distorted face, blur, low quality, bad anatomy, deformed eyes, extra limbs, plastic skin">
+              </div>
+            </div>
+
+            <!-- Image Controls (Visible when in Image Mode) -->
+            <div id="studio-image-controls">
+              <label class="studio-label" style="font-weight:700;letter-spacing:0.5px;">ASPECT RATIO</label>
+              <div class="studio-pill-group" id="aspect-ratio-pills">
+                <button type="button" class="studio-pill active" onclick="setStudioAspect('9:16', this)">📱 Portrait (9:16)</button>
+                <button type="button" class="studio-pill" onclick="setStudioAspect('16:9', this)">🖥️ Landscape (16:9)</button>
+                <button type="button" class="studio-pill" onclick="setStudioAspect('1:1', this)">⬛ Square (1:1)</button>
+              </div>
+
+              <label class="studio-label" style="font-weight:700;letter-spacing:0.5px;margin-top:10px;">IMAGE QUALITY</label>
+              <div class="studio-pill-group" id="resolution-pills">
+                <button type="button" class="studio-pill active" onclick="setStudioResolution('1080p', this)">Standard (1080p)</button>
+                <button type="button" class="studio-pill" onclick="setStudioResolution('4k', this)">✨ High (4K Ultra HD)</button>
+              </div>
+            </div>
+
+            <!-- Video Controls (Visible when in Video Mode) -->
+            <div id="studio-video-controls" style="display:none;">
+              <div class="video-selectors-grid">
+                <div>
+                  <label class="studio-label">Camera Movement</label>
+                  <select id="video-camera-select" class="model-selector" style="width:100%;font-size:0.82rem;">
+                    <option value="zoom">Cinematic Zoom</option>
+                    <option value="dolly">Dolly In (Hero Focus)</option>
+                    <option value="pan">Smooth Camera Pan</option>
+                    <option value="orbit">Cinematic Orbit (360°)</option>
+                    <option value="static">Static Locked Camera</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="studio-label">Motion Strength</label>
+                  <select id="video-motion-select" class="model-selector" style="width:100%;font-size:0.82rem;">
+                    <option value="low">Low (Natural Stability)</option>
+                    <option value="medium" selected>Medium (Cinematic Movement)</option>
+                    <option value="high">High (Action Dynamic)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="studio-label">Duration</label>
+                  <select id="video-duration-select" class="model-selector" style="width:100%;font-size:0.82rem;">
+                    <option value="5" selected>5 Seconds (Cinematic)</option>
+                    <option value="10">10 Seconds (Extended Cut)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="studio-label">Framerate (FPS)</label>
+                  <select id="video-fps-select" class="model-selector" style="width:100%;font-size:0.82rem;">
+                    <option value="24" selected>24 FPS (35mm Film)</option>
+                    <option value="30">30 FPS (Broadcast)</option>
+                    <option value="60">60 FPS (Ultra Fluid)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Generation Submit Button -->
+            <button type="button" class="btn-new-chat btn-generate-main" id="btn-studio-submit" onclick="submitStudioGeneration()">
+              ✨ Generate Image
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Bottom Workspace: Real-time Progress & Results (Spans full width) -->
+        <div class="studio-bottom-workspace">
+          <!-- Real-time Progress Pipeline Tracker -->
+          <div id="studio-progress-card" class="progress-card-box" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-weight:700;font-size:0.85rem;color:var(--accent-cyan);" id="studio-step-label">Validating Reference Quality...</span>
+              <span style="font-size:0.75rem;color:var(--text-dim);" id="studio-step-percent">25%</span>
+            </div>
+            <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+              <div id="studio-progress-bar-fill" style="width:25%;height:100%;background:var(--gradient-brand);transition:width 0.3s ease;"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-dim);margin-top:6px;" id="studio-step-desc">Running Laplacian sharpness check and SFace 128-d embedding...</div>
+          </div>
+
+          <!-- Error Banner -->
+          <div id="studio-error-banner" style="display:none;padding:10px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#f87171;font-size:0.85rem;margin-bottom:12px;"></div>
+
+          <!-- Result Preview Container -->
+          <div id="studio-result-card" style="display:none;margin:14px 0;padding:14px;background:rgba(0,0,0,0.35);border-radius:14px;border:1px solid var(--border-subtle);">
+            <div id="studio-result-media" style="text-align:center;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:10px;">
+              <div id="studio-verification-badge"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;" id="studio-result-actions"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 4K Full-Resolution Lightbox Modal (Zoom & Pan on Desktop & Mobile) -->
+  <div class="modal-overlay lightbox-overlay" id="image-lightbox-modal" onclick="if(event.target===this) closeLightbox()">
+    <div class="lightbox-container">
+      <button class="lightbox-close-btn" onclick="closeLightbox()" title="Close full resolution view">✕</button>
+      <div class="lightbox-image-wrapper">
+        <img id="lightbox-img" src="" alt="Full Resolution 4K View">
+      </div>
+      <div class="lightbox-toolbar">
+        <span id="lightbox-meta">3840×2160 Ultra HD • 100% Quality</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a id="lightbox-download-link" href="" download class="tool-btn" style="background:var(--accent-blue);color:#fff;">⬇️ Download 4K Ultra HD</a>
+          <button class="tool-btn" onclick="closeLightbox()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.classList.remove('active');"></div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" onclick="if(event.target===this) closeSettingsModal()">
+    <div class="modal-card" style="max-height:90vh;overflow-y:auto;">
+      <div class="modal-head">
+        <h3 style="font-size:1.1rem;font-weight:700;" data-i18n="settings_title">JaganGpt Settings</h3>
+        <button onclick="closeSettingsModal()" style="font-size:1.2rem;color:var(--text-dim);">✕</button>
+      </div>
+      <form class="modal-body" onsubmit="saveSettings(event)">
+        
+        <!-- Google Gemini API Key Input -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;" data-i18n="gemini_api_key_label">Google Gemini API Key</label>
+          <input type="password" id="settings-gemini-key" value="{{ settings.gemini_api_key or '' }}" class="chat-search-input" placeholder="AQ.Ab8..." style="padding:10px;">
+          <small style="color:var(--text-dim);font-size:0.73rem;" data-i18n="gemini_api_key_help">
+            Get your key from Google AI Studio. Enables Gemini 2.5 Flash.
+          </small>
+        </div>
+
+        <!-- Replicate Token (Optional) -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Replicate API Token (Optional - InstantID GPU)</label>
+          <input type="password" id="settings-replicate-token" value="{{ settings.replicate_api_token or '' }}" class="chat-search-input" placeholder="r8_..." style="padding:10px;">
+          <small style="color:var(--text-dim);font-size:0.73rem;">
+            Enables remote InstantID GPU inference via Replicate if desired.
+          </small>
+        </div>
+
+        <!-- Hugging Face Token (Optional) -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Hugging Face Token (Optional)</label>
+          <input type="password" id="settings-hf-token" value="{{ settings.huggingface_token or '' }}" class="chat-search-input" placeholder="hf_..." style="padding:10px;">
+        </div>
+
+        <!-- Language Preference -->
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;" data-i18n="language_pref_label">Language Preference</label>
+          <select id="settings-pref-lang" class="model-selector" style="width:100%;">
+            <option value="auto" {% if settings.preferred_language == 'auto' %}selected{% endif %} data-i18n="lang_auto">Auto Detect (Multilingual Voice / English UI)</option>
+            <option value="en" {% if settings.preferred_language == 'en' %}selected{% endif %} data-i18n="lang_en">English</option>
+            <option value="te" {% if settings.preferred_language == 'te' %}selected{% endif %} data-i18n="lang_te">Telugu (Voice Mode)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-new-chat" style="justify-content:center;background:var(--gradient-brand);color:#fff;border:none;padding:12px;">
+          <span data-i18n="save_settings">Save Settings</span>
+        </button>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Guest Mode Restriction Modal -->
+  <div class="modal-overlay" id="guest-upgrade-modal" onclick="if(event.target===this) closeGuestModal()">
+    <div class="modal-card" style="max-width:440px;text-align:center;padding:32px 24px;">
+      <div style="font-size:3rem;margin-bottom:12px;">🔒</div>
+      <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:8px;" id="guest-modal-title">Guest Mode: Text Only</h3>
+      <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:24px;line-height:1.6;" id="guest-modal-desc">
+        Guest mode is restricted to <strong>text conversations only</strong>. To generate AI images and videos, please log in or create a free account!
+      </p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <a href="{{ url_for('login') }}" class="btn-new-chat" style="flex:1;justify-content:center;background:var(--gradient-brand);color:#fff;border:none;padding:12px 16px;font-size:0.9rem;">
+          🔐 Log In
+        </a>
+        <a href="{{ url_for('register') }}" class="btn-new-chat" style="flex:1;justify-content:center;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border-highlight);padding:12px 16px;font-size:0.9rem;">
+          ✨ Sign Up
+        </a>
+      </div>
+      <button onclick="closeGuestModal()" style="margin-top:16px;background:none;border:none;color:var(--text-dim);font-size:0.85rem;cursor:pointer;text-decoration:underline;">
+        Continue with Text Chat
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    window.IS_GUEST = {{ 'true' if is_guest else 'false' }};
+  </script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/media_gen.js') }}"></script>
+
+  <script>
+    function filterConversations(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.conv-item').forEach(item => {
+        const title = item.querySelector('.conv-title').textContent.toLowerCase();
+        item.style.display = title.includes(q) ? 'flex' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>

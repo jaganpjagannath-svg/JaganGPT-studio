@@ -1,0 +1,37 @@
+@"
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Uploads and generated files
+uploads/
+test_artifacts/
+
+# Generated test images
+test_flux.jpg
+test_gen_hero.jpg
+test_pollinations_portrait.jpg
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+"@ | Set-Content .gitignore
