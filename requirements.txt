@@ -42,3 +42,7 @@ imageio-ffmpeg
 
 pydantic
 gunicorn
+
+gTTS
+pydub
+soundfile
